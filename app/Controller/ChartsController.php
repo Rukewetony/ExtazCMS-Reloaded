@@ -3,12 +3,10 @@ class ChartsController extends AppController{
 
 	public $uses = ['Informations', 'shopHistory', 'starpassHistory', 'paypalHistory', 'donationLadder'];
 	public $components = ['Highcharts.Highcharts'];
-    public $Highcharts = null;
 
     public function admin_memory(){
-		if($this->Auth->user('role') > 0){
-			$informations = $this->Informations->find('first');
-    		$api = new JSONAPI($informations['Informations']['jsonapi_ip'], $informations['Informations']['jsonapi_port'], $informations['Informations']['jsonapi_username'], $informations['Informations']['jsonapi_password'], $informations['Informations']['jsonapi_salt']);
+		if($this->Auth->user('role') > 1){
+    		$api = new JSONAPI($this->config['jsonapi_ip'], $this->config['jsonapi_port'], $this->config['jsonapi_username'], $this->config['jsonapi_password'], $this->config['jsonapi_salt']);
 			$usedMemory = round($api->call('server.performance.memory.used')['0']['success']);
 			$totalMemory = round($api->call('server.performance.memory.total')['0']['success']) - ($usedMemory);
 			$pieData = array(
@@ -63,16 +61,15 @@ class ChartsController extends AppController{
 	}
 
 	public function admin_donator(){
-		if($this->Auth->user('role') > 0){
-			$informations = $this->Informations->find('first');
-			$site_money = ucfirst($informations['Informations']['site_money']);
+		if($this->Auth->user('role') > 1){
+			$site_money = ucfirst($this->config['site_money']);
 			$donatorsTokens = $this->donationLadder->find('all', ['limit' => 5, 'order' => ['donationLadder.tokens' => 'DESC']]);
 			$donatorsUsername = $this->donationLadder->find('list', ['fields' => ['donationLadder.id'], 'limit' => 5]);
 			$countDonators = $this->donationLadder->find('count');
 			$chartName = 'donator_chart';
 	        $mychart = $this->Highcharts->create($chartName, 'column');
 
-	        if($countDonators > 5){
+	        if($countDonators >= 5){
 	        	$dt[0] = $donatorsTokens[0]['donationLadder']['tokens'];
 		        $dt[1] = $donatorsTokens[1]['donationLadder']['tokens'];
 		        $dt[2] = $donatorsTokens[2]['donationLadder']['tokens'];
@@ -118,26 +115,13 @@ class ChartsController extends AppController{
 						settype($dt[3], 'int');
 		        		break;
 
-		        	case 5:
-		        		$dt[0] = $donatorsTokens[0]['donationLadder']['tokens'];
-				        $dt[1] = $donatorsTokens[1]['donationLadder']['tokens'];
-				        $dt[2] = $donatorsTokens[2]['donationLadder']['tokens'];
-				        $dt[3] = $donatorsTokens[3]['donationLadder']['tokens'];
-				        $dt[4] = $donatorsTokens[4]['donationLadder']['tokens'];
-				        settype($dt[0], 'int');
-						settype($dt[1], 'int');
-						settype($dt[2], 'int');
-						settype($dt[3], 'int');
-						settype($dt[4], 'int');
-		        		break;
-
 		        	default:
 		        		$dt[0] = 0;
 		        		break;
 		        }
 		    }
 
-		    if($countDonators > 5){
+		    if($countDonators >= 5){
 	        	$du[0] = $donatorsTokens[0]['User']['username'];
 		        $du[1] = $donatorsTokens[1]['User']['username'];
 		        $du[2] = $donatorsTokens[2]['User']['username'];
@@ -153,6 +137,7 @@ class ChartsController extends AppController{
 		        	case 2:
 		        		$du[0] = $donatorsTokens[0]['User']['username'];
 		        		$du[1] = $donatorsTokens[1]['User']['username'];
+		        		break;
 
 		        	case 3:
 		        		$du[0] = $donatorsTokens[0]['User']['username'];
@@ -165,14 +150,6 @@ class ChartsController extends AppController{
 				        $du[1] = $donatorsTokens[1]['User']['username'];
 				        $du[2] = $donatorsTokens[2]['User']['username'];
 				        $du[3] = $donatorsTokens[3]['User']['username'];
-		        		break;
-
-		        	case 5:
-		        		$du[0] = $donatorsTokens[0]['User']['username'];
-				        $du[1] = $donatorsTokens[1]['User']['username'];
-				        $du[2] = $donatorsTokens[2]['User']['username'];
-				        $du[3] = $donatorsTokens[3]['User']['username'];
-				        $du[4] = $donatorsTokens[4]['User']['username'];
 		        		break;
 
 		        	default:
@@ -238,7 +215,7 @@ class ChartsController extends AppController{
 	}
 
 	public function admin_shop(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$chartName = 'shop_chart';
 	        $mychart = $this->Highcharts->create($chartName, 'areaspline');
 
@@ -332,7 +309,7 @@ class ChartsController extends AppController{
 	}
 
 	public function admin_user(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$chartName = 'user_chart';
 	        $mychart = $this->Highcharts->create($chartName, 'areaspline');
 
@@ -426,7 +403,7 @@ class ChartsController extends AppController{
 	}
 
 	public function admin_paypal(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$chartName = 'paypal_chart';
 	        $mychart = $this->Highcharts->create($chartName, 'areaspline');
 
@@ -520,7 +497,7 @@ class ChartsController extends AppController{
 	}
 
 	public function admin_starpass(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$chartName = 'starpass_chart';
 	        $mychart = $this->Highcharts->create($chartName, 'areaspline');
 
@@ -614,9 +591,8 @@ class ChartsController extends AppController{
 	}
 
 	public function admin_disk(){
-		if($this->Auth->user('role') > 0){
-			$informations = $this->Informations->find('first');
-    		$api = new JSONAPI($informations['Informations']['jsonapi_ip'], $informations['Informations']['jsonapi_port'], $informations['Informations']['jsonapi_username'], $informations['Informations']['jsonapi_password'], $informations['Informations']['jsonapi_salt']);
+		if($this->Auth->user('role') > 1){
+    		$api = new JSONAPI($this->config['jsonapi_ip'], $this->config['jsonapi_port'], $this->config['jsonapi_username'], $this->config['jsonapi_password'], $this->config['jsonapi_salt']);
 			$totalMemory = round($api->call('server.performance.disk.free')['0']['success']);
 			$usedMemory = round($api->call('server.performance.disk.used')['0']['success']);
 			$pieData = array(

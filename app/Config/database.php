@@ -3,10 +3,10 @@ class DATABASE_CONFIG {
 	public $default = array(
 		'datasource' => 'Database/Mysql',
 		'persistent' => false,
-		'host' => '127.0.0.1', // Hôte
+		'host' => 'localhost', // Hôte
 		'login' => 'root', // Nom d'utilisateur
-		'password' => '', // Mot de passe
-		'database' => 'cms', // Database
+		'password' => 'root', // Mot de passe
+		'database' => 'extaz', // Database
 		'prefix' => 'extaz_',
 		'encoding' => 'utf8',
 	);

@@ -1,4 +1,9 @@
 <?php $this->assign('title', 'Editer un commentaire'); ?>
+<?php
+if($data['User']['username'] == null){
+    $data['User']['username'] = '{Compte supprimé}';
+}
+?>
 <script>
 $(document).ready(function(){
     $(".confirm").confirm({
@@ -28,7 +33,8 @@ $(document).ready(function(){
                             </section>
                         </div>
                         <div class="form-group">
-                            <?php echo $this->Form->textarea('comment', array('type' => 'text', 'value' => $data['Comment']['comment'], 'class' => 'form-control', 'label' => 'Commentaire')); ?>
+                            <label>Commentaire</label>
+                            <?php echo $this->Form->textarea('comment', array('type' => 'text', 'value' => $data['Comment']['comment'], 'class' => 'form-control')); ?>
                             </section>
                         </div>
                         <hr>

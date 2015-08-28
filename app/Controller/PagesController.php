@@ -21,6 +21,8 @@
 App::uses('AppController', 'Controller');
 App::uses('CakeEmail', 'Network/Email');
 App::uses('AYAH', 'Lib/AYAH');
+App::uses('Folder', 'Utility');
+App::uses('File', 'Utility');
 
 /**
  * Static content controller
@@ -37,7 +39,7 @@ class PagesController extends AppController {
  *
  * @var array
  */
-	public $uses = ['Informations', 'shopHistory', 'starpassHistory', 'paypalHistory', 'Team', 'Support', 'supportComments', 'donationLadder'];
+	public $uses = ['Informations', 'shopHistory', 'starpassHistory', 'paypalHistory', 'Team', 'Support', 'supportComments', 'donationLadder', 'shopCategories', 'sendTokensHistory'];
 
 /**
  * Displays a view
@@ -79,70 +81,179 @@ class PagesController extends AppController {
 		}
 	}
 
-	public function admin_install_update(){
-		/***********************************/
-		/**     Module de mise à jour     **/
-		/** automatique en developpement  **/
-		/***********************************/
-
-		// if($this->Auth->user('role') > 0){
-		// 	// Mise à jour MYSQL (non fonctionelle)
-		// 	$mysql = file_get_contents('http://extaz-mc.fr/extazcms/maj.sql');
-		// 	$db = ConnectionManager::getDataSource('default');
-
-		// 	//Requête : sélectionne l'ensemble des colonnes de la table extraz_informations
-		// 	$r = $db->rawQuery('SELECT * FROM extaz_informations LIMIT 0');
-
-		// 	//Récupère l'ensemble des noms de colonnes dans un array/tableau :
-		// 	//  "columnCount"   -> Permet de retourner le nombre de colonnes
-		// 	//  "getColumnMeta" -> Permet de retourner les métadonnées d'une colonne
-		// 	for($i = 0; $i < $r->columnCount(); $i++){
-		// 	    $col = $r->getColumnMeta($i);
-		// 	    $columns[] = $col['name'];
-		// 	}
-			
-		// 	// Test si la colonne "use_slider" existe dans notre tableau comportant l'ensemble des colonnes de la table "informations"
-		// 	if(in_array('use_slider', $columns)){
-		// 		$test = 'La colonne use_slider existe deja dans la table informations';
-		// 	}
-		// 	else{
-		// 		$test = 'Aucun resultat';
-		// 	}
-		// 	debug($test);
-		// 	exit();
-			
-		// 	// Mise à jour des fichiers (fonctionelle)
-		// 	$file = 'http://extaz-mc.fr/extazcms/maj.zip';
-		// 	$newfile = 'tmp_file.zip';
-		// 	if(!copy($file, $newfile)){
-		// 	    $this->Session->setFlash('Un problème est survenu !', 'error');
-		// 		$this->redirect(['controller' => 'pages', 'action' => 'update', 'admin' => true]);
-		// 	}
-		// 	$path = pathinfo(realpath($newfile), PATHINFO_DIRNAME);
-		// 	$zip = new ZipArchive;
-		// 	$res = $zip->open($newfile);
-		// 	if($res === TRUE){
-		// 		$zip->extractTo('../');
-		// 		$zip->close();
-		// 		unlink($newfile);
-		// 		$this->Session->setFlash('Mise à jour effectué avec succès !', 'success');
-		// 		$this->redirect(['controller' => 'pages', 'action' => 'update', 'admin' => true]);
-		// 	}
-		// 	else{
-		// 		$this->Session->setFlash('Un problème est survenu !', 'error');
-		// 		$this->redirect(['controller' => 'pages', 'action' => 'update', 'admin' => true]);
-		// 	}
-		// }
-		// else{
-		// 	throw new NotFoundException();
-		// }
-		$this->Session->setFlash('Module non disponible actuellement, veuillez procéder à une mise à jour manuelle', 'warning');
-		$this->redirect(['controller' => 'pages', 'action' => 'update', 'admin' => true]);
+	public function admin_send_tokens_history(){
+		if($this->Auth->user('role') > 1){
+			$this->set('data', $this->sendTokensHistory->find('all', ['order' => ['sendTokensHistory.id DESC']]));
+		}
+		else{
+			throw new NotFoundException();
+		}
 	}
 
-	public function admin_update(){
-		if($this->Auth->user('role') > 0){
-			
+	public function admin_send_tokens_delete($id){
+		if($this->Auth->user('role') > 1){
+			if($this->sendTokensHistory->findById($id)){
+				$this->sendTokensHistory->delete($id);
+				$this->Session->setFlash('Action effectuée !', 'toastr_success');
+				return $this->redirect($this->referer());
+			}
+			else{
+				$this->Session->setFlash('Action impossible !', 'toastr_error');
+				return $this->redirect($this->referer());
+			}
+		}
+		else{
+			throw new NotFoundException();
+		}
+	}
+
+	public function send_tokens(){
+		if($this->Auth->user()){
+			if($this->request->is('post')){
+				$shipper = strtolower($this->Auth->user('username'));
+				$shipper_username = $this->Auth->user('username');
+				$recipient = strtolower($this->request->data['Pages']['username']);
+				$recipient_username = $this->request->data['Pages']['username'];
+				$nb_tokens = $this->request->data['Pages']['nb_tokens'];
+				$nb_tokens = str_replace('-', '', $nb_tokens);
+				$send_tokens_loss_rate = $this->config['send_tokens_loss_rate'];
+				/*
+				* Nombre de tokens avec le taux de perte
+				* $nb_tokens_with_loss_rate = $nb_tokens - round($send_tokens_loss_rate / 100 * $nb_tokens);
+				*/
+				$nb_tokens_with_loss_rate = $nb_tokens - round($send_tokens_loss_rate / 100 * $nb_tokens);
+				// Si c'est un nombre
+				if(is_numeric($nb_tokens)){
+					// Si l'expéditeur est différent du destinataire
+					if($shipper != $recipient){
+						// Si le destinataire existe (c'est mieux)
+						if($this->User->find('first', ['conditions' => ['User.username' => $recipient]])){
+							// Si l'expéditeur à assez de tokens
+							if($nb_tokens <= $this->tokens){
+								// On récupère les infos
+								$shipper_tokens = $this->tokens;
+								$shipper_id = $this->Auth->user('id');
+								$user_infos = $this->User->find('first', ['conditions' => ['User.username' => $recipient]]);
+								$user_tokens = $user_infos['User']['tokens'];
+								$user_id = $user_infos['User']['id'];
+								// On calcul le nouveau nb de tokens
+								$new_shipper_tokens = $shipper_tokens - $nb_tokens;
+								$new_user_tokens = $user_tokens + $nb_tokens_with_loss_rate;
+								// On définit le nv nb de tokens de l'expéditeur
+								$this->User->id = $shipper_id;
+								$this->User->saveField('tokens', $new_shipper_tokens);
+								// On définit le nv nb de tokens du destinataire
+								$this->User->id = $user_id;
+								$this->User->saveField('tokens', $new_user_tokens);
+								// Historique
+								$this->sendTokensHistory->create;
+								$this->sendTokensHistory->saveField('shipper', $shipper_username);
+								$this->sendTokensHistory->saveField('recipient', $recipient_username);
+								$this->sendTokensHistory->saveField('nb_tokens', $nb_tokens);
+								$this->sendTokensHistory->saveField('loss_rate', $this->config['send_tokens_loss_rate'].'%');
+								$this->sendTokensHistory->saveField('nb_tokens_with_loss_rate', $nb_tokens_with_loss_rate);
+								// Message et redirection
+								$this->Session->setFlash(''.$recipient_username.' a reçu '.$nb_tokens_with_loss_rate.' '.$this->config['site_money'].'', 'success');
+								return $this->redirect(['controller' => 'users', 'action' => 'account', '?' => ['tab' => 'send_tokens'], 'admin' => false]);
+							}
+							else{
+								$this->Session->setFlash('Vous n\'avez pas assez de tokens', 'error');
+								return $this->redirect(['controller' => 'users', 'action' => 'account', '?' => ['tab' => 'send_tokens'], 'admin' => false]);
+							}
+						}
+						else{
+							$this->Session->setFlash('Le destinataire n\'existe pas', 'error');
+							return $this->redirect(['controller' => 'users', 'action' => 'account', '?' => ['tab' => 'send_tokens'], 'admin' => false]);
+						}
+					}
+					else{
+						$this->Session->setFlash('Vous ne pouvez pas vous envoyer des '.$this->config['site_money'].' vous même...', 'error');
+						return $this->redirect(['controller' => 'users', 'action' => 'account', '?' => ['tab' => 'send_tokens'], 'admin' => false]);
+					}
+				}
+				else{
+					$this->Session->setFlash('Erreur', 'error');
+					return $this->redirect(['controller' => 'users', 'action' => 'account', '?' => ['tab' => 'send_tokens'], 'admin' => false]);
+				}
+			}
+		}
+		else{
+			$this->Session->setFlash('Vous devez être connecté pour accéder à cette page', 'error');
+			return $this->redirect(['controller' => 'users', 'action' => 'login', 'admin' => false]);
+		}
+	}
+
+	public function admin_edit_shop_categories($id) {
+		if($this->Auth->user('role') > 1){
+			if($this->shopCategories->findById($id)){
+				$this->set('data', $this->shopCategories->findById($id));
+				if($this->request->is('post')){
+					if(!empty($this->request->data['Pages']['name'])){
+						$this->shopCategories->id = $id;
+						$name = ucfirst($this->request->data['Pages']['name']);
+						$this->shopCategories->saveField('name', $name);
+						$this->Session->setFlash('Catégorie modifiée avec succès !', 'toastr_success');
+						return $this->redirect(['controller' => 'pages', 'action' => 'list_shop_categories']);
+					}
+					else{
+						$this->Session->setFlash('Vous devez renseigner une catégorie !', 'toastr_error');
+						return $this->redirect(['controller' => 'pages', 'action' => 'edit_shop_categories', 'id' => $id]);
+					}
+				}
+			}
+			else{
+				$this->Session->setFlash('Cette catégorie n\'existe pas', 'toastr_error');
+				return $this->redirect(['controller' => 'pages', 'action' => 'list_shop_categories']);
+			}
+		}
+		else{
+			throw new NotFoundException();
+		}
+	}
+
+	public function admin_delete_shop_categories($id) {
+		if($this->Auth->user('role') > 1){
+			if($this->shopCategories->findById($id)){
+				$this->shopCategories->delete($id);
+				$this->Session->setFlash('Catégorie supprimée avec succès !', 'toastr_success');
+				return $this->redirect(['controller' => 'pages', 'action' => 'list_shop_categories']);
+			}
+			else{
+				$this->Session->setFlash('Action impossible !', 'toastr_error');
+				return $this->redirect(['controller' => 'pages', 'action' => 'list_shop_categories']);
+			}
+		}
+		else{
+			throw new NotFoundException();
+		}
+	}
+
+	public function admin_add_shop_categories() {
+		if($this->Auth->user('role') > 1){
+			if($this->request->is('post')){
+				if(!empty($this->request->data['Pages']['name'])){
+					$this->shopCategories->create;
+					$name = ucfirst($this->request->data['Pages']['name']);
+					$this->shopCategories->saveField('name', $name);
+					$this->Session->setFlash('Catégorie créée avec succès !', 'toastr_success');
+					return $this->redirect(['controller' => 'pages', 'action' => 'list_shop_categories']);
+				}
+				else{
+					$this->Session->setFlash('Vous devez renseigner une catégorie !', 'toastr_error');
+				}
+			}
+		}
+		else{
+			throw new NotFoundException();
+		}
+	}
+
+	public function admin_list_shop_categories() {
+		if($this->Auth->user('role') > 1){
+			$categories = $this->shopCategories->find('all');
+			$nb_categories = $this->shopCategories->find('count');
+			$this->set('categories', $categories);
+			$this->set('nb_categories', $nb_categories);
 		}
 		else{
 			throw new NotFoundException();
@@ -152,8 +263,7 @@ class PagesController extends AppController {
 	public function admin_chat_update(){
 		if($this->Auth->user('role') > 0){
 			if($this->request->is('ajax')){
-				$informations = $this->Informations->find('first');
-    			$api = new JSONAPI($informations['Informations']['jsonapi_ip'], $informations['Informations']['jsonapi_port'], $informations['Informations']['jsonapi_username'], $informations['Informations']['jsonapi_password'], $informations['Informations']['jsonapi_salt']);
+    			$api = new JSONAPI($this->config['jsonapi_ip'], $this->config['jsonapi_port'], $this->config['jsonapi_username'], $this->config['jsonapi_password'], $this->config['jsonapi_salt']);
 				$data = '<i class="fa fa-clock-o"></i> Dernière mise à jour à '.date('H:i:s').', il y a '.$api->call('players.online.count')[0]['success'].' joueur(s) connecté(s)';
 				echo json_encode($data);
 				exit();
@@ -168,10 +278,9 @@ class PagesController extends AppController {
 		if($this->Auth->user('role') > 0){
 			if($this->request->is('ajax')){
 				$data = '';
-				$informations = $this->Informations->find('first');
-    			$api = new JSONAPI($informations['Informations']['jsonapi_ip'], $informations['Informations']['jsonapi_port'], $informations['Informations']['jsonapi_username'], $informations['Informations']['jsonapi_password'], $informations['Informations']['jsonapi_salt']);
-				$messages = $api->call('streams.chat.latest', [$informations['Informations']['chat_nb_messages']])[0]['success'];
-				if(count($messages) >= $informations['Informations']['chat_nb_messages']){
+    			$api = new JSONAPI($this->config['jsonapi_ip'], $this->config['jsonapi_port'], $this->config['jsonapi_username'], $this->config['jsonapi_password'], $this->config['jsonapi_salt']);
+				$messages = $api->call('streams.chat.latest', [$this->config['chat_nb_messages']])[0]['success'];
+				if(count($messages) >= $this->config['chat_nb_messages']){
 					foreach($messages as $m){
 						if(empty($m['player'])){
 							$explode = explode(']', $m['message']);
@@ -187,7 +296,7 @@ class PagesController extends AppController {
 					}
 				}
 				else{
-					$data = '<div class="alert alert-warning alert-dismissable"><small>Désolé mais il n\'y a pas assez de messages pour afficher le chat (minimum '.$informations['Informations']['chat_nb_messages'].')</small></div>';
+					$data = '<div class="alert alert-warning alert-dismissable"><small>Désolé mais il n\'y a pas assez de messages pour afficher le chat (minimum '.$this->config['chat_nb_messages'].')</small></div>';
 				}
 				echo json_encode($data);
 				exit();
@@ -201,26 +310,25 @@ class PagesController extends AppController {
 	public function admin_send_message(){
 		if($this->Auth->user('role') > 0){
 			if($this->request->is('ajax')){
-				$informations = $this->Informations->find('first');
-	    		$api = new JSONAPI($informations['Informations']['jsonapi_ip'], $informations['Informations']['jsonapi_port'], $informations['Informations']['jsonapi_username'], $informations['Informations']['jsonapi_password'], $informations['Informations']['jsonapi_salt']);
-				$message = str_replace('/', '', $this->request->data['message']);
-				//if(!empty($message) && $api->call('chat.with_name', [$message, $this->Auth->user('username')])){
-				// if(!empty($message) && $api->call('chat.broadcast', ['['.$this->Auth->user('username').'] '.$message])){
-				// 	exit();
-				// }
-
-				if(empty($informations['Informations']['chat_prefix'])){
+	    		$api = new JSONAPI($this->config['jsonapi_ip'], $this->config['jsonapi_port'], $this->config['jsonapi_username'], $this->config['jsonapi_password'], $this->config['jsonapi_salt']);
+				$message = trim(str_replace('/', '', $this->request->data['message']));
+				if(empty($this->config['chat_prefix'])){
 					$prefix = '';
 					$command = '['.$this->Auth->user('username').'] '.$message;
 				}
 				else{
-					$prefix = '('.$informations['Informations']['chat_prefix'].') ';
+					$prefix = '('.$this->config['chat_prefix'].') ';
 					$command = $prefix.'['.$this->Auth->user('username').'] '.$message;
 				}
 				if(!empty($message)){
+					$data['result'] = 'success';
 					$api->call('chat.broadcast', [$command]);
-					exit();
 				}
+				else{
+					$data['result'] = 'error';
+				}
+				echo json_encode($data);
+				exit();
 				
 			}
 		}
@@ -230,51 +338,56 @@ class PagesController extends AppController {
 	}
 
 	public function admin_send_command(){
-		if($this->Auth->user('role') > 0){
-			if($this->request->is('ajax')){
-				$informations = $this->Informations->find('first');
-	    		$api = new JSONAPI($informations['Informations']['jsonapi_ip'], $informations['Informations']['jsonapi_port'], $informations['Informations']['jsonapi_username'], $informations['Informations']['jsonapi_password'], $informations['Informations']['jsonapi_salt']);
-				$command = str_replace('/', '', $this->request->data['command']);
+		if($this->request->is('ajax')){
+    		$api = new JSONAPI($this->config['jsonapi_ip'], $this->config['jsonapi_port'], $this->config['jsonapi_username'], $this->config['jsonapi_password'], $this->config['jsonapi_salt']);
+			$command = trim(str_replace('/', '', $this->request->data['command']));
+			if($this->Auth->user('role') > 1){
 				if(!empty($command) && $api->call('server.run_command', [$command])){
-					exit();
+					$data['result'] = 'success';
+					$data['message'] = 'Commande envoyée au serveur !';
+				}
+				else{
+					$data['result'] = 'error';
+					$data['message'] = 'Erreur';
 				}
 			}
-		}
-		else{
-			throw new NotFoundException();
+			else{
+				$data['result'] = 'error';
+				$data['message'] = 'Action non autorisée';
+			}
+			echo json_encode($data);
+			exit();
 		}
 	}
 
 	public function admin_edit_donator($id = null){
-        if($this->Auth->user('role') > 0){
-            $this->donationLadder->id = $id;
-            if($this->donationLadder->exists()){
+        if($this->Auth->user('role') > 1){
+            if($this->donationLadder->findById($id)){
                 $this->set('data', $this->donationLadder->find('first', ['conditions' => ['donationLadder.id' => $id]]));
                 if($this->request->is('post')){
                     $this->donationLadder->id = $id;
                     $this->donationLadder->saveField('tokens', $this->request->data['Pages']['tokens_ladder']);
                     $this->donationLadder->saveField('updated', $this->request->data['Pages']['updated']);
-                    $this->Session->setFlash('Modification réussie !', 'success');
+                    $this->Session->setFlash('Modification réussie !', 'toastr_success');
                     return $this->redirect($this->referer());
                 }
             }
             else{
-                $this->Session->setFlash('Cet membre n\'existe pas !', 'error');
+                $this->Session->setFlash('Ce donateur n\'existe pas !', 'toastr_error');
                 return $this->redirect($this->referer());
             }
         }
     }
 
 	public function admin_delete_donator($id = null){
-		if($this->Auth->user('role') > 0){
-			$this->donationLadder->id = $id;
-			if($this->donationLadder->exists()){
+		if($this->Auth->user('role') > 1){
+			if($this->donationLadder->findById($id)){
 				$this->donationLadder->delete($id);
-				$this->Session->setFlash('Ce donateur a été retiré du classement !', 'success');
+				$this->Session->setFlash('Ce donateur a été retiré du classement !', 'toastr_success');
 				return $this->redirect(['controller' => 'pages', 'action' => 'list_donator', 'admin' => true]);
 			}
 			else{
-				$this->Session->setFlash('Ce dontateur n\'existe pas !', 'error');
+				$this->Session->setFlash('Ce dontateur n\'existe pas !', 'toastr_error');
 				return $this->redirect(['controller' => 'pages', 'action' => 'list_donator', 'admin' => true]);
 			}
 		}
@@ -284,7 +397,7 @@ class PagesController extends AppController {
 	}
 
 	public function admin_list_donator(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$this->set('data', $this->donationLadder->find('all', ['order' => ['donationLadder.tokens' => 'DESC']]));
 		}
 		else{
@@ -293,7 +406,7 @@ class PagesController extends AppController {
 	}
 
 	public function admin_stats(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$today = date('Y-m-j').' 00:00:00';
 			$hier = date('Y-m-j', strtotime('-1 day')).' 00:00:00';
 			$thisWeek = date('Y-m-j', strtotime('-7 day')).' 00:00:00';
@@ -333,6 +446,9 @@ class PagesController extends AppController {
 			$this->set('ticketsHier', $this->Support->find('count', ['conditions' => ['Support.created >' => $hier, 'Support.created <' => $today]]));
 			$this->set('reponsesHier', $this->supportComments->find('count', ['conditions' => ['supportComments.created >' => $hier, 'supportComments.created <' => $today]]));
 		}
+		elseif($this->Auth->user('role') > 0){
+			return $this->redirect(['controller' => 'pages', 'action' => 'manage_tickets']);
+		}
 		else{
 			throw new NotFoundException();
 		}
@@ -342,11 +458,25 @@ class PagesController extends AppController {
 		if($this->Auth->user()){
 			if($this->request->is('post')){
 				if(!empty($this->request->data['Pages']['message'])){
+					if($this->request->data['Pages']['type'] == 'report'){
+						$reported = $this->request->data['Pages']['report_input'];
+						$message = '(Signalement de '.$reported.') '.$this->request->data['Pages']['message'];
+					}
+					else{
+						$message = $this->request->data['Pages']['message'];
+					}
 					$this->Support->create;
 					$this->Support->saveField('user_id', $this->Auth->user('id'));
 					$this->Support->saveField('username', $this->Auth->user('username'));
-					$this->Support->saveField('priority', $this->request->data['Pages']['priority']);
-					$this->Support->saveField('message', $this->request->data['Pages']['message']);
+					$this->Support->saveField('type', $this->request->data['Pages']['type']);
+					if($this->request->data['Pages']['type'] == 'report'){
+						$this->Support->saveField('priority', '2');
+					}
+					else{
+						$this->Support->saveField('priority', $this->request->data['Pages']['priority']);
+					}
+					$message = nl2br(htmlspecialchars($message));
+					$this->Support->saveField('message', $message);
 					$this->Support->saveField('resolved', 0);
 					$this->Session->setFlash('Votre message a été envoyé au support, merci !', 'success');
 					return $this->redirect(['controller' => 'pages', 'action' => 'list_tickets']);
@@ -365,8 +495,8 @@ class PagesController extends AppController {
 
 	public function list_tickets(){
 		if($this->Auth->user()){
-			$this->set('data', $this->Support->find('all', ['conditions' => ['Support.username' => $this->Auth->user('username')], 'order' => ['Support.created DESC']]));
-			$this->set('nbTickets', $this->Support->find('count', ['conditions' => ['Support.username' => $this->Auth->user('username')]]));
+			$this->set('data', $this->Support->find('all', ['conditions' => ['Support.user_id' => $this->Auth->user('id')], 'order' => ['Support.created DESC']]));
+			$this->set('nbTickets', $this->Support->find('count', ['conditions' => ['Support.user_id' => $this->Auth->user('id')]]));
 		}
 		else{
 			$this->Session->setFlash('Vous devez être connecté pour accéder à cette page', 'error');
@@ -377,8 +507,8 @@ class PagesController extends AppController {
 	public function view_ticket($id = null){
 		if($this->Auth->user()){
 			$ticket = $this->Support->find('first', ['conditions' => ['Support.id' => $id]]);
-			$ticketOwner = $ticket['Support']['username'];
-			if($ticketOwner == $this->Auth->user('username') OR $this->Auth->user('role') > 0){
+			$ticket_owner = $ticket['User']['username'];
+			if($ticket_owner == $this->Auth->user('username') OR $this->Auth->user('role') > 0){
 				if($this->Support->findById($id)){
 					$this->set('data', $this->Support->find('first', ['conditions' => ['Support.id' => $id]]));
 					$this->set('comments', $this->supportComments->find('all', ['conditions' => ['supportComments.ticket_id' => $id], 'order' => ['supportComments.created DESC']]));
@@ -457,25 +587,24 @@ class PagesController extends AppController {
 			if($this->request->is('post')){
 				if(!empty($this->request->data['Pages']['message'])){
 					$ticket = $this->Support->find('first', ['conditions' => ['Support.id' => $this->request->data['Pages']['id']]]);
-					$ticketOwner = $this->User->find('first', ['conditions' => ['User.username' => $ticket['Support']['username']]]);
-					$ticketOwnerEmail = $ticketOwner['User']['email'];
-					$ticketOwnerAllowEmail = $ticketOwner['User']['allow_email'];
-					if($ticketOwner['User']['username'] == $this->Auth->user('username') OR $this->Auth->user('role') > 0){
+					$ticket_owner = $this->User->find('first', ['conditions' => ['User.username' => $ticket['User']['username']]]);
+					$ticket_owner_email = $ticket_owner['User']['email'];
+					$ticket_owner_allow_email = $ticket_owner['User']['allow_email'];
+					if($ticket_owner['User']['username'] == $this->Auth->user('username') OR $this->Auth->user('role') > 0){
 						if($ticket['Support']['resolved'] == 0){
 							// Si l'utilisateur accepte de recevoir des emails
-							if($ticketOwnerAllowEmail == 1){
-								$informations = $this->Informations->find('first');
-								$name_server = $informations['Informations']['name_server'];
-								$name_server = strtolower(preg_replace('/\s/', '', $name_server));
-								$Email = new CakeEmail();
-								$Email->from(array('support@'.$name_server.'.com' => $name_server));
-								$Email->to($ticketOwnerEmail);
-								$Email->subject('['.$informations['Informations']['name_server'].'] Support, nouvelle réponse à votre ticket #'.$ticket['Support']['id'].'');
-								$Email->send('Retrouvez cette nouvelle réponse ici : http://'.$_SERVER['HTTP_HOST'].$this->webroot.'tickets/'.$ticket['Support']['id']);
-							}
+							// if($ticket_owner_allow_email == 1){
+							// 	$name_server = $this->config['name_server'];
+							// 	$name_server = strtolower(preg_replace('/\s/', '', $name_server));
+							// 	$Email = new CakeEmail();
+							// 	$Email->from(array('support@'.$name_server.'.com' => $name_server));
+							// 	$Email->to($ticket_owner_email);
+							// 	$Email->subject('['.$this->config['name_server'].'] Support, nouvelle réponse à votre ticket #'.$ticket['Support']['id'].'');
+							// 	$Email->send('Retrouvez cette nouvelle réponse ici : http://'.$_SERVER['HTTP_HOST'].$this->webroot.'tickets/'.$ticket['Support']['id']);
+							// }
 							$this->supportComments->create;
 							$this->supportComments->saveField('ticket_id', $this->request->data['Pages']['id']);
-							$this->supportComments->saveField('username', $this->Auth->user('username'));
+							$this->supportComments->saveField('user_id', $this->Auth->user('id'));
 							$this->supportComments->saveField('message', $this->request->data['Pages']['message']);
 							$this->Session->setFlash('Réponse ajoutée !', 'success');
 							return $this->redirect($this->referer());
@@ -523,7 +652,7 @@ class PagesController extends AppController {
 	}
 
 	public function admin_shop_history(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$this->set('data', $this->shopHistory->find('all', ['order' => ['shopHistory.created DESC']]));
 		}
 		else{
@@ -532,7 +661,7 @@ class PagesController extends AppController {
 	}
 
 	public function admin_starpass_history(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$this->set('data', $this->starpassHistory->find('all', ['order' => ['starpassHistory.created DESC']]));
 		}
 		else{
@@ -541,7 +670,7 @@ class PagesController extends AppController {
 	}
 
 	public function admin_paypal_history(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$this->set('data', $this->paypalHistory->find('all', ['order' => ['paypalHistory.created DESC']]));
 		}
 		else{
@@ -550,7 +679,7 @@ class PagesController extends AppController {
 	}
 
 	public function admin_add_member(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			if($this->request->is('post')){
 				$username = trim($this->request->data['Pages']['username']);
 				$this->Team->saveField('username', $username);
@@ -564,7 +693,8 @@ class PagesController extends AppController {
 				$this->Team->saveField('order', $this->request->data['Pages']['order']);
 				$this->Team->saveField('facebook_url', $this->request->data['Pages']['facebook_url']);
 				$this->Team->saveField('twitter_url', $this->request->data['Pages']['twitter_url']);
-				$this->Session->setFlash('Membre ajouté à l\'équipe !', 'success');
+				$this->Team->saveField('youtube_url', $this->request->data['Pages']['youtube_url']);
+				$this->Session->setFlash('Membre ajouté à l\'équipe !', 'toastr_success');
 				return $this->redirect(['controller' => 'pages', 'action' => 'list_member', 'admin' => true]);
 			}
 		}
@@ -574,7 +704,7 @@ class PagesController extends AppController {
 	}
 
 	public function admin_list_member(){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			$this->set('data', $this->Team->find('all', array('order' => array('Team.order' => 'ASC'))));
 		}
 		else{
@@ -583,14 +713,14 @@ class PagesController extends AppController {
 	}
 
 	public function admin_delete_member($id = null){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			if($this->Team->findById($id)){
 				$this->Team->delete($id);
-				$this->Session->setFlash('Membre retiré de l\'équipe !', 'success');
+				$this->Session->setFlash('Membre retiré de l\'équipe !', 'toastr_success');
 				return $this->redirect(['controller' => 'pages', 'action' => 'list_member', 'admin' => true]);
 			}
 			else{
-				$this->Session->setFlash('Ce membre n\'existe pas !', 'error');
+				$this->Session->setFlash('Ce membre n\'existe pas !', 'toastr_error');
 				return $this->redirect(['controller' => 'pages', 'action' => 'list_member', 'admin' => true]);
 			}
 		}
@@ -600,9 +730,8 @@ class PagesController extends AppController {
 	}
 
 	public function admin_edit_member($id = null){
-        if($this->Auth->user('role') > 0){
-            $this->Team->id = $id;
-            if($this->Team->exists()){
+        if($this->Auth->user('role') > 1){
+            if($this->Team->findById($id)){
                 $this->set('data', $this->Team->find('first', ['conditions' => ['Team.id' => $id]]));
                 if($this->request->is('post')){
                     $this->Team->id = $id;
@@ -614,12 +743,13 @@ class PagesController extends AppController {
 					$this->Team->saveField('order', $this->request->data['Pages']['order']);
 					$this->Team->saveField('facebook_url', $this->request->data['Pages']['facebook_url']);
 					$this->Team->saveField('twitter_url', $this->request->data['Pages']['twitter_url']);
-                    $this->Session->setFlash('Membre modifié !', 'success');
+					$this->Team->saveField('youtube_url', $this->request->data['Pages']['youtube_url']);
+                    $this->Session->setFlash('Membre modifié !', 'toastr_success');
                     return $this->redirect(['controller' => 'pages', 'action' => 'list_member', 'admin' => true]);
                 }
             }
             else{
-                $this->Session->setFlash('Cet membre n\'existe pas !', 'error');
+                $this->Session->setFlash('Ce membre n\'existe pas !', 'toastr_error');
                 return $this->redirect($this->referer());
             }
         }
@@ -631,42 +761,51 @@ class PagesController extends AppController {
 	}
 
 	public function contact(){
-		if($this->Auth->user()){
-			$ayah = new AYAH();
-            $this->set('ayah', $ayah);
-			if($this->request->is('post')){
-                if(array_key_exists('captcha', $this->request->data)){
-                    $score = $ayah->scoreResult();
-                    if($score){
-						$informations = $this->Informations->find('first');
-						$contact_email = $informations['Informations']['contact_email'];
-						$name_server = $informations['Informations']['name_server'];
-						$username = $this->Auth->user('username');
-						$email = $this->Auth->user('email');
-						$subject = $this->request->data['Pages']['subject'];
-						$message = $this->request->data['Pages']['message'];
-						if(!empty($subject) && !empty($message)){
-							$name_server = strtolower(preg_replace('/\s/', '', $name_server));
-							$Email = new CakeEmail();
-		                    $Email->from(array('admin@'.$name_server.'.com' => $name_server));
-		                    $Email->to($contact_email);
-		                    $Email->subject($subject);
-		                    $Email->send($username.' ('.$email.') a envoyé : '.$message);
-							$this->Session->setFlash('Votre message a été envoyé, merci !', 'success');
+		if($this->config['use_contact'] == 1){
+			if($this->Auth->user()){
+				if($this->config['use_captcha'] == 1){
+					$ayah = new AYAH();
+	            	$this->set('ayah', $ayah);
+				}
+				if($this->request->is('post')){
+	                if($this->config['use_captcha'] == 0 OR array_key_exists('captcha', $this->request->data)){
+	                	if($this->config['use_captcha'] == 1){
+							$score = $ayah->scoreResult();
+						}
+	                    if($this->config['use_captcha'] == 0 OR $score){
+							$contact_email = $this->config['contact_email'];
+							$name_server = $this->config['name_server'];
+							$username = $this->Auth->user('username');
+							$email = $this->Auth->user('email');
+							$subject = $this->request->data['Pages']['subject'];
+							$message = $this->request->data['Pages']['message'];
+							if(!empty($subject) && !empty($message)){
+								$name_server = strtolower(preg_replace('/\s/', '', $name_server));
+								$Email = new CakeEmail();
+			                    $Email->from(array('admin@'.$name_server.'.com' => $name_server));
+			                    $Email->to($contact_email);
+			                    $Email->subject($subject);
+			                    $Email->send($username.' ('.$email.') a envoyé : '.$message);
+								$this->Session->setFlash('Votre message a été envoyé, merci !', 'success');
+							}
+							else{
+								$this->Session->setFlash('Tous les champs sont obligatoires', 'error');
+							}
 						}
 						else{
-							$this->Session->setFlash('Tous les champs sont obligatoires', 'error');
+							$this->Session->setFlash('Erreur 1001', 'error');
 						}
-					}
-					else{
-						$this->Session->setFlash('Erreur 1001', 'error');
 					}
 				}
 			}
+			else{
+				$this->Session->setFlash('Vous devez être connecté pour accéder à cette page', 'error');
+				return $this->redirect(['controller' => 'users', 'action' => 'login', 'admin' => false]);
+			}
 		}
 		else{
-			$this->Session->setFlash('Vous devez être connecté pour accéder à cette page', 'error');
-			return $this->redirect(['controller' => 'users', 'action' => 'login', 'admin' => false]);
+			$this->Session->setFlash('Accès refusé', 'error');
+			return $this->redirect(['controller' => 'posts', 'action' => 'index', 'admin' => false]);
 		}
 	}
 

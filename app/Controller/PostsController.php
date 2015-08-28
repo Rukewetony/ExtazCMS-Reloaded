@@ -1,7 +1,7 @@
 <?php
 class PostsController extends AppController{
 
-	public $uses = array('Post', 'Informations', 'Like', 'Comment');
+	public $uses = ['Post', 'Informations', 'Like', 'Comment', 'postView'];
 
 	var $paginate = array(
 		'Post' => array(
@@ -24,14 +24,14 @@ class PostsController extends AppController{
 
 	public function read($slug, $id){
 		// Si c'est un utilisateur spécial
-		if($this->Auth->user('role') == 0){
+		if($this->Auth->user('role') > 1){
 			// Si l'article ciblé existe, on va le chercher même si c'est un brouillon
-			if($this->Post->find('all', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1, 'Post.draft' => 0)))){
-				$this->set('post', $this->Post->find('first', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1, 'Post.draft' => 0))));
+			if($this->Post->find('all', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1)))){
+				$this->set('post', $this->Post->find('first', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1))));
 				$this->set('comments', $this->Comment->find('all', array('conditions' => array('Comment.post_id' => $id), 'order' => ['Comment.created' => 'DESC'])));
 				$this->set('lasts_posts', $this->Post->find('all', array('conditions' => array('Post.visible' => 1, 'Post.draft' => 0), 'order' => array('Post.posted' => 'DESC'))));
 				$this->set('liked', $this->Like->find('all', array('conditions' => array('Like.id_article' => $id, 'Like.ip' => $_SERVER['REMOTE_ADDR']))));
-				$this->set('nbLikes', $this->Like->find('count', array('conditions' => array('Like.id_article' => $id))));
+				$this->set('nb_likes', $this->Like->find('count', array('conditions' => array('Like.id_article' => $id))));
 			}
 			// Si l'article ciblé n'existe pas, erreur 404
 			else{
@@ -41,23 +41,34 @@ class PostsController extends AppController{
 		// Si c'est un utilisateur
 		else{
 			// Si l'article ciblé existe, on va le chercher mais pas si c'est un brouillon
-			if($this->Post->find('all', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1)))){
-				$this->set('post', $this->Post->find('first', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1))));
+			if($this->Post->find('all', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1, 'Post.draft' => 0)))){
+				$this->set('post', $this->Post->find('first', array('conditions' => array('Post.id' => $id, 'Post.slug' => $slug, 'Post.visible' => 1, 'Post.draft' => 0))));
 				$this->set('comments', $this->Comment->find('all', array('conditions' => array('Comment.post_id' => $id), 'order' => ['Comment.created' => 'DESC'])));
 				$this->set('lasts_posts', $this->Post->find('all', array('conditions' => array('Post.visible' => 1, 'Post.draft' => 0), 'order' => array('Post.posted' => 'DESC'))));
 				$this->set('liked', $this->Like->find('all', array('conditions' => array('Like.id_article' => $id, 'Like.ip' => $_SERVER['REMOTE_ADDR']))));
-				$this->set('nbLikes', $this->Like->find('count', array('conditions' => array('Like.id_article' => $id))));
+				$this->set('nb_likes', $this->Like->find('count', array('conditions' => array('Like.id_article' => $id))));
 			}
 			// Si l'article ciblé n'existe pas, erreur 404
 			else{
 				throw new NotFoundException();
 			}
 		}
+		// Les visionnages
+		$ip = $_SERVER['REMOTE_ADDR'];
+		$seen = $this->postView->find('first', ['conditions' => ['postView.post_id' => $id, 'postView.ip' => $ip]]);
+		// Si l'utilisateur n'a jamais vu cette actu, on l'ajoute
+		if(empty($seen)){
+			$this->postView->create;
+			$this->postView->saveField('post_id', $id);
+			$this->postView->saveField('ip', $ip);
+		}
+		// On envoie le nombre de visionnages à la vue
+		$this->set('views', $this->postView->find('count', ['conditions' => ['postView.post_id' => $id]]));
 	}
 
 	public function admin_add(){
 		// Si c'est un utilisateur spécial
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			// Si le formulaire à été posté
 			if($this->request->is('post')){
 				// On envoie les data au model
@@ -78,17 +89,17 @@ class PostsController extends AppController{
 						$this->Post->saveField('draft', 1);
 						$this->Post->saveField('corrected', 0);
 						$this->Post->saveField('posted', 0);
-						$this->Session->setFlash('Article enregistré en tant que brouillon !', 'success');
+						$this->Session->setFlash('Article enregistré en tant que brouillon !', 'toastr_success');
 						return $this->redirect(array('controller' => 'posts', 'action' => 'drafts'));
 					}
 					// Si aucune image n'est postée
 					else{
-						$this->Session->setFlash('Vous devez mettre une image', 'error');
+						$this->Session->setFlash('Vous devez mettre une image', 'toastr_error');
 					}
 				}
 				// Si les rdv ne sont pas respectées
 				else{
-					$this->Session->setFlash('Une erreur est survenue !', 'error');
+					$this->Session->setFlash('Une erreur est survenue !', 'toastr_error');
 				}
 			}
 		}
@@ -101,7 +112,7 @@ class PostsController extends AppController{
 	public function admin_edit($id = null){
 		$this->set('data', $this->Post->findById($id));
 		// Si c'est un utilisateur spécial
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			// Si l'article existe
 			if($this->Post->findById($id)){
 				$corrected = $this->Post->find('count', ['conditions' => ['Post.id' => $id, 'Post.corrected' => 1]]);
@@ -127,8 +138,8 @@ class PostsController extends AppController{
 							$this->Post->save($this->request->data);
 							$slug = strtolower($this->request->data['Post']['slug']);
 							$this->Post->saveField('slug', $slug);
-							$this->Session->setFlash('Article modifié !', 'success');
-							return $this->redirect(['controller' => 'posts', 'action' => 'index', 'admin' => false]);
+							$this->Session->setFlash('Article modifié !', 'toastr_success');
+							return $this->redirect(['controller' => 'posts', 'action' => 'list', 'admin' => true]);
 						}
 						// Si l'image a été changée
 						else{
@@ -138,19 +149,19 @@ class PostsController extends AppController{
 							$this->Post->saveField('cat', $this->request->data['Post']['cat']);
 							$this->Post->saveField('slug', $slug);
 							$this->Post->saveField('content', $this->request->data['Post']['content']);
-							$this->Session->setFlash('Article modifié !', 'success');
-							return $this->redirect(['controller' => 'posts', 'action' => 'index', 'admin' => false]);
+							$this->Session->setFlash('Article modifié !', 'toastr_success');
+							return $this->redirect(['controller' => 'posts', 'action' => 'list', 'admin' => false]);
 						}
 					}
 					// Si les rdv ne sont pas respectées
 					else{
-						$this->Session->setFlash('Une erreur est survenue !', 'error');
+						$this->Session->setFlash('Une erreur est survenue !', 'toastr_error');
 					}
 				}
 			}
 			// Si l'article n'existe pas
 			else{
-				$this->Session->setFlash('Cet article n\'existe pas, impossible de le modifier', 'error');
+				$this->Session->setFlash('Cet article n\'existe pas, impossible de le modifier', 'toastr_error');
 				return $this->redirect(array('controller' => 'posts', 'action' => 'index', 'admin' => false));
 			}
 		}
@@ -162,7 +173,7 @@ class PostsController extends AppController{
 
 	public function admin_drafts(){
 		// Si c'est un utilisateur spécial
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			// On va chercher les brouillons
 			$this->set('drafts', $this->Post->find('all', array('conditions' => array('Post.visible' => 1, 'Post.draft' => 1), 'order' => array('Post.created' => 'DESC'))));
 		}
@@ -174,9 +185,11 @@ class PostsController extends AppController{
 
 	public function admin_list(){
 		// Si c'est un utilisateur spécial
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			// On va chercher les brouillons
 			$this->set('data', $this->Post->find('all', array('conditions' => array('Post.visible' => 1), 'order' => array('Post.created' => 'DESC'))));
+			$this->set('likes', $this->Like->find('all'));
+			$this->set('views', $this->postView->find('all'));
 		}
 		// Si c'est un utilisateur
 		else{
@@ -186,14 +199,14 @@ class PostsController extends AppController{
 
 	public function admin_delete($id = null){
 		// Si c'est un utilisateur spécial
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			// Si l'article existe
 			if($this->Post->findById($id)){
 				// On défini sur quel article on veut agir
 				$this->Post->id = $id;
 				// On rend l'article invisible
 				$this->Post->saveField('visible', 0);
-				$this->Session->setFlash('Article supprimé !', 'success');
+				$this->Session->setFlash('Article supprimé !', 'toastr_success');
 				return $this->redirect(['controller' => 'posts', 'action' => 'list', 'admin' => true]);
 			}
 			// Si l'article n'existe pas
@@ -253,7 +266,7 @@ class PostsController extends AppController{
 	}
 
 	public function admin_publish($id, $draft){
-		if($this->Auth->user('role') > 0){
+		if($this->Auth->user('role') > 1){
 			// On va agir sur l'id passé via l'url
 			$this->Post->id = $id;
 			// $draft = $this->request->params['named']['draft'];
@@ -261,7 +274,7 @@ class PostsController extends AppController{
 			if($draft == 0){
 				// On passe l'article en brouillon
 				$this->Post->saveField('draft', 1);
-				$this->Session->setFlash('Article deplacé vers les brouillons !', 'success');
+				$this->Session->setFlash('Article deplacé vers les brouillons !', 'toastr_success');
 				$this->redirect(array('controller' => 'posts', 'action' => 'drafts', 'admin' => true));
 			}
 			// Si cet article est un brouillon
@@ -275,7 +288,7 @@ class PostsController extends AppController{
 					// On update la date de publication
 					$this->Post->saveField('posted', date("Y-m-d H:i:s"));
 				}
-				$this->Session->setFlash('Article publié !', 'success');
+				$this->Session->setFlash('Article publié !', 'toastr_success');
 				return $this->redirect(['controller' => 'posts', 'action' => 'list', 'admin' => true]);
 			}
 		}

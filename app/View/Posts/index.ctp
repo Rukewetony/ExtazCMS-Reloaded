@@ -36,10 +36,10 @@ $(document).ready(function(){
                                     <?php
                                     $content = '<h3><font color="white">'.$slider[$i]['Post']['title'].'</font></h3>'.html_entity_decode(strip_tags($slider[$i]['Post']['content']));
                                     if(mb_strlen($content) > 400){
-                                        echo mb_substr($content, 0, 400).'... <a href="'.$this->Html->url(['controller' => 'posts', 'action' => 'read', 'slug' => $slider[$i]['Post']['slug'], 'id' => $slider[$i]['Post']['id']]).'">Lire la suite</a>';
+                                        echo mb_substr($content, 0, 400).'... <a href="'.$this->Html->url(['controller' => 'posts', 'action' => 'read', 'slug' => $slider[$i]['Post']['slug'], 'id' => $slider[$i]['Post']['id']]).'">Lire</a>';
                                     }
                                     else{
-                                        echo $content.' <a href="'.$this->Html->url(['controller' => 'posts', 'action' => 'read', 'slug' => $slider[$i]['Post']['slug'], 'id' => $slider[$i]['Post']['id']]).'">Lire la suite</a>';;
+                                        echo $content.' <a href="'.$this->Html->url(['controller' => 'posts', 'action' => 'read', 'slug' => $slider[$i]['Post']['slug'], 'id' => $slider[$i]['Post']['id']]).'">Lire</a>';;
                                     }
                                     ?>
                                 </p>
@@ -91,29 +91,19 @@ $(document).ready(function(){
                                 ?>
                             </h3>
                             <div class="by-author">
-                                <span>Par</span> <strong><?php echo $articles[$a]['Post']['author']; ?></strong>
+                                <strong><?php echo $articles[$a]['Post']['author']; ?></strong>
                                 <span>
-                                    le <?php echo $this->Time->format('d/m/Y à H:i', $articles[$a]['Post']['posted']); ?>
-                                    <?php if($role > 0){ ?>
-                                        <a href="<?php echo $this->Html->url(['controller' => 'posts', 'action' => 'edit', $articles[$a]['Post']['id'], 'admin' => true]); ?>" class="btn btn-default btn-xs">
-                                            <font color="#777777">
-                                                <i class="fa fa-pencil"></i>
-                                            </font>
-                                        </a>
-                                        <a href="<?php echo $this->Html->url(['controller' => 'posts', 'action' => 'delete', $articles[$a]['Post']['id'], 'admin' => true]); ?>" class="confirm btn btn-default btn-xs">
-                                            <font color="red">
-                                                <i class="fa fa-times"></i>
-                                            </font>
-                                        </a>
+                                	<?php if($use_posts_views == 1){ ?>
+	                                    le <?php echo $this->Time->format('d/m/Y à H:i', $articles[$a]['Post']['posted']); ?>
+	                                    <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
+	                                        <i class="fa fa-eye"></i> <?php echo count($articles[$a]['postView']); ?>
+	                                    </a>
                                     <?php } ?>
                                     <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
                                         <i class="fa fa-heart"></i> <?php echo count($articles[$a]['Like']); ?>
                                     </a>
                                     <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
                                         <i class="fa fa-comments"></i> <?php echo count($articles[$a]['Comment']); ?>
-                                    </a>
-                                    <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
-                                        <i class="fa fa-paper-plane"></i> Lire la suite
                                     </a>
                                 </span>
                             </div>
@@ -157,29 +147,19 @@ $(document).ready(function(){
                                 ?>
                             </h3>
                             <div class="by-author">
-                                <span>Par</span> <strong><?php echo $articles[$a]['Post']['author']; ?></strong>
+                                <strong><?php echo $articles[$a]['Post']['author']; ?></strong>
                                 <span>
-                                    le <?php echo $this->Time->format('d/m/Y à H:i', $articles[$a]['Post']['posted']); ?>
-                                    <?php if($role > 0){ ?>
-                                        <a href="<?php echo $this->Html->url(['controller' => 'posts', 'action' => 'edit', $articles[$a]['Post']['id'], 'admin' => true]); ?>" class="btn btn-default btn-xs">
-                                            <font color="#777777">
-                                                <i class="fa fa-pencil"></i>
-                                            </font>
-                                        </a>
-                                        <a href="<?php echo $this->Html->url(['controller' => 'posts', 'action' => 'delete', $articles[$a]['Post']['id'], 'admin' => true]); ?>" class="confirm btn btn-default btn-xs">
-                                            <font color="red">
-                                                <i class="fa fa-times"></i>
-                                            </font>
-                                        </a>
+                                    <?php if($use_posts_views == 1){ ?>
+	                                    le <?php echo $this->Time->format('d/m/Y à H:i', $articles[$a]['Post']['posted']); ?>
+	                                    <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
+	                                        <i class="fa fa-eye"></i> <?php echo count($articles[$a]['postView']); ?>
+	                                    </a>
                                     <?php } ?>
                                     <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
                                         <i class="fa fa-heart"></i> <?php echo count($articles[$a]['Like']); ?>
                                     </a>
                                     <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
                                         <i class="fa fa-comments"></i> <?php echo count($articles[$a]['Comment']); ?>
-                                    </a>
-                                    <a href="<?php echo $this->Html->url(array('controller' => 'posts', 'action' => 'read', 'slug' => $articles[$a]['Post']['slug'], 'id' => $articles[$a]['Post']['id'])); ?>" class="btn btn-default btn-xs">
-                                        <i class="fa fa-paper-plane"></i> Lire la suite
                                     </a>
                                 </span>
                             </div>

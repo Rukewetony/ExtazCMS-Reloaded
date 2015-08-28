@@ -1,0 +1,22 @@
+2015-08-28 17:53:05 Error: [MissingActionException] Action AppController::index() could not be found.
+Exception Attributes: array (
+  'controller' => 'AppController',
+  'action' => 'index',
+)
+Request URL: /app/
+Stack Trace:
+#0 /Users/tristanhonorowski/Documents/workspace/My Websites (2)/Extaz-CMS/lib/Cake/Routing/Dispatcher.php(191): Controller->invokeAction(Object(CakeRequest))
+#1 /Users/tristanhonorowski/Documents/workspace/My Websites (2)/Extaz-CMS/lib/Cake/Routing/Dispatcher.php(165): Dispatcher->_invoke(Object(AppController), Object(CakeRequest))
+#2 /Users/tristanhonorowski/Documents/workspace/My Websites (2)/Extaz-CMS/app/webroot/index.php(108): Dispatcher->dispatch(Object(CakeRequest), Object(CakeResponse))
+#3 {main}
+2015-08-28 17:53:12 Error: [MissingActionException] Action AppController::index() could not be found.
+Exception Attributes: array (
+  'controller' => 'AppController',
+  'action' => 'index',
+)
+Request URL: /app/
+Stack Trace:
+#0 /Users/tristanhonorowski/Documents/workspace/My Websites (2)/Extaz-CMS/lib/Cake/Routing/Dispatcher.php(191): Controller->invokeAction(Object(CakeRequest))
+#1 /Users/tristanhonorowski/Documents/workspace/My Websites (2)/Extaz-CMS/lib/Cake/Routing/Dispatcher.php(165): Dispatcher->_invoke(Object(AppController), Object(CakeRequest))
+#2 /Users/tristanhonorowski/Documents/workspace/My Websites (2)/Extaz-CMS/app/webroot/index.php(108): Dispatcher->dispatch(Object(CakeRequest), Object(CakeResponse))
+#3 {main}

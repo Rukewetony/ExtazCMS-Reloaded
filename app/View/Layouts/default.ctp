@@ -1,14 +1,14 @@
+<?php if(!isset($server_ip)) exit('Erreur: impossible de communiquer avec la base de donn&eacute;es'); ?>
 <!DOCTYPE html>
 <!--[if IE 8]><html lang="fr" class="ie8"><![endif]-->  
 <!--[if IE 9]><html lang="fr" class="ie9"><![endif]-->  
 <!--[if !IE]><!--><html lang="fr"><!--<![endif]-->  
 <head>
-    <title><?php echo $this->fetch('title'); ?></title>
+    <title><?php echo $name_server. " &raquo; " .$this->fetch('title'); ?></title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ExtazCMS">
-    <meta name="author" content="MrSaooty">
-    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600' rel='stylesheet' type='text/css'>    
+    <meta name="description" content="Site web du serveur <?= $name_server; ?>, propulsé par ExtazCMS Reloaded">
+    <meta name="author" content="TristanCode">
     <?php
     // Favicon
     echo $this->Html->meta('favicon.png', $logo_url, array('type' => 'icon'));
@@ -20,24 +20,28 @@
     echo $this->Html->css('blog');
     echo $this->Html->css('profile');
     echo $this->Html->css('timeline');
+    echo $this->Html->css('summernote');
 
     // CSS Implementing Plugins
     echo $this->Html->css('/files/line-icons/line-icons');
     echo $this->Html->css('/files/flexslider/flexslider');
     echo $this->Html->css('/files/parallax-slider/css/parallax-slider');
     echo $this->Html->css('/files/sky-forms/css/custom-sky-forms');
+    echo $this->Html->css('dropzone');
 
     // CSS Theme
     echo $this->Html->css('themes/default');
+    echo $this->Html->css('flatty');
 
     // CSS Customization
     echo $this->Html->css('custom');
     ?>
     <link href="//cdn.datatables.net/1.10.4/css/jquery.dataTables.min.css" rel="stylesheet">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery.isotope/2.2.0/isotope.pkgd.js"></script>
     <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
 </head>	
-<body cz-shortcut-listen="true" class="boxed-layout container" background="<?php echo $this->webroot.'img/bg/'.$background.'.jpg'; ?>">
+<body cz-shortcut-listen="true" class="boxed-layout container" background="<?php echo $this->webroot.'img/bg/'.$background; ?>">
     <div class="wrapper">
         <!--Header-->    
         <div class="header header-v4">
@@ -49,9 +53,17 @@
                         <div class="topbar">
                             <div class="container">
                                 <!-- Topbar Navigation -->
-                                <ul class="loginbar pull-right">
-                                    <li><i class="fa fa-globe"></i> <a href="">IP du serveur : </a><a href="#"><?php echo $server_ip.':'.$server_port; ?></a> </li>
-                                </ul>
+                                <div class="topbar-server-ip">
+                                    <?php
+                                    // Si le port est 25565 alors il est inutile de l'afficher
+                                    if($server_port != 25565 && $server_port != null){
+                                        echo '<i class="fa fa-wifi"></i> IP du serveur : <span class="server-ip">'.$server_ip.':'.$server_port.'</span>';
+                                    }
+                                    else{
+                                        echo '<i class="fa fa-wifi"></i> IP du serveur : <span class="server-ip">'.$server_ip.'</span>';
+                                    }
+                                    ?>
+                                </div>
                                 <!-- End Topbar Navigation -->
                             </div>
                         </div>
@@ -71,7 +83,7 @@
                             <span class="fa fa-bars"></span>
                         </button>
                         <a class="navbar-brand" href="<?php echo $this->Html->url(['controller' => 'posts', 'action' => 'index', 'admin' => false]); ?>" style="margin-top:15px;">
-                           <img src="<?php echo $logo_url; ?>" height="25" width="25" style="margin-top: -4px;" alt=""> <?php echo $name_server; ?>
+                           <img src="<?php echo $logo_url; ?>" height="50" width="50" style="margin-top: -4px;" alt=""> <?= $name_server; ?>
                         </a>
                     </div>
                 </div>          
@@ -93,7 +105,7 @@
                             <?php } ?>
                             <li class="dropdown">
                                 <a href="javascript:void(0);" class="dropdown-toggle" data-toggle="dropdown">
-                                    Support
+                                    Support <i class="fa fa-angle-down"></i>
                                 </a>
                                 <ul class="dropdown-menu">
                                     <li>
@@ -104,6 +116,25 @@
                                     </li>
                                 </ul>
                             </li>
+                            <?php if($use_votes == 1 && $use_votes_ladder == 1){ ?>
+                            <li class="dropdown">
+                                <a href="javascript:void(0);" class="dropdown-toggle" data-toggle="dropdown">
+                                    Votes <i class="fa fa-angle-down"></i>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <?php echo $this->Html->link('Vote et gagne', ['controller' => 'votes', 'action' => 'index']); ?>                             
+                                    </li>
+                                    <li>
+                                        <?php echo $this->Html->link('Classement', ['controller' => 'votes', 'action' => 'ladder']); ?>                             
+                                    </li>
+                                </ul>
+                            </li>
+                            <?php } elseif($use_votes == 1 && $use_votes_ladder == 0) { ?>
+                            <li>
+                                <?php echo $this->Html->link('Vote et gagne', ['controller' => 'votes', 'action' => 'index']); ?>                             
+                            </li>
+                            <?php } ?>
                             <?php if($use_rules == 1){ ?>
                             <li class="none">
                                 <?php echo $this->Html->link('Règlement', ['controller' => 'pages', 'action' => 'rules']); ?>
@@ -119,9 +150,26 @@
                                 <?php echo $this->Html->link('Contact', ['controller' => 'pages', 'action' => 'contact']); ?>
                             </li>
                             <?php } ?>
-                            <?php if($role > 0){ ?>
+                            <?php if($nb_cpages == 1){ ?>
                             <li class="none">
-                                <?php echo $this->Html->link('Administration', ['controller' => 'pages', 'action' => 'stats', 'admin' => true]); ?>
+                                <?php echo $this->Html->link($cpages[0]['Cpage']['name'], ['controller' => 'cpages', 'action' => 'read', 'slug' => $cpages[0]['Cpage']['slug']]); ?>
+                            </li>
+                            <?php } elseif($nb_cpages != 0 && $nb_cpages > 1) { ?>
+                            <li class="dropdown">
+                                <a href="javascript:void(0);" class="dropdown-toggle" data-toggle="dropdown">
+                                    Autres <i class="fa fa-angle-down"></i>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <?php
+                                    foreach($cpages as $cp){
+                                        ?>
+                                        <li>
+                                            <?php echo $this->Html->link($cp['Cpage']['name'], ['controller' => 'cpages', 'action' => 'read', 'slug' => $cp['Cpage']['slug']]); ?>
+                                        </li>
+                                        <?php
+                                    }
+                                    ?>
+                                </ul>
                             </li>
                             <?php } ?>
                         </ul>
@@ -131,16 +179,34 @@
             <!-- End Navbar -->
         </div>
         <!--End Header-->
-
+        <?php if($happy_hour == 1){ ?>
+            <div class="happy-hour">
+                <?php
+                if($use_paypal == 1){
+                    ?>
+                    <i class="fa fa-gift"></i> Happy hour en cours, <?php echo $happy_hour_bonus.'% de '.$site_money.' gratuits'; ?>. Achetez <?php echo $starpass_tokens.' '.$site_money.' + '.$starpass_happy_hour_bonus.' gratuits '; ?> via Starpass ou <?php echo $paypal_tokens.' '.$site_money.' + '.$paypal_happy_hour_bonus.' gratuits'; ?> via PayPal !
+                    <a href="<?php echo $this->Html->url(['controller' => 'shops', 'action' => 'reload']); ?>" class="btn btn-default btn-xs happy-hour-btn"><i class="fa fa-shopping-cart"></i> Recharger</a>
+                    <button class="btn btn-default btn-xs happy-hour-close"><i class="fa fa-times"></i></button>
+                    <?php
+                }
+                else{
+                    ?>
+                    <i class="fa fa-gift"></i> Happy hour en cours, <?php echo $happy_hour_bonus.'% de '.$site_money.' gratuits'; ?>. Achetez <?php echo $starpass_tokens.' '.$site_money.' + '.$starpass_happy_hour_bonus.' gratuits '; ?> via Starpass !
+                    <a href="<?php echo $this->Html->url(['controller' => 'shops', 'action' => 'reload']); ?>" class="btn btn-default btn-xs happy-hour-btn"><i class="fa fa-shopping-cart"></i> Recharger</a>
+                    <button class="btn btn-default btn-xs happy-hour-close"><i class="fa fa-times"></i></button>
+                    <?php
+                }
+                ?>
+            </div>
+        <?php } ?>
+        
         <?php echo $this->Session->flash(); ?>
         <?php echo $this->fetch('content'); ?>
-
+    
             <div class="copyright">
                 <div class="container">
                     <p class="text-center">
-                        <!-- Merci de ne pas retirer cette mention, je partage ce CMS gratuitement sans attentes en retour, merci de respecter mon travail -->
-                        Propulsé par<a href="http://cms.extaz-mc.fr/" target="_blank">ExtazCMS <?php echo $version; ?></a>code par<a href="http://twitter.com/MrSaooty" target="_blank">@MrSaooty</a>
-                        <!-- Merci de ne pas retirer cette mention, je partage ce CMS gratuitement sans attentes en retour, merci de respecter mon travail -->
+                       Site Propulsé par<a href="http://www.bukkit.fr/topic/18919-extazcms-reloaded-open-source-gratuit/" target="_blank">ExtazCMS Reloaded</a>
                     </p>
                 </div> 
             </div><!--/copyright--> 
@@ -156,33 +222,37 @@
     echo $this->Html->script('/files/flexslider/jquery.flexslider-min');
     echo $this->Html->script('/files/parallax-slider/js/modernizr');
     echo $this->Html->script('/files/parallax-slider/js/jquery.cslider');
+    echo $this->Html->script('dropzone');
 
     // JS Page Level
     echo $this->Html->script('app');
     echo $this->Html->script('jquery.confirm');
     echo $this->Html->script('jquery.bootstrap-growl');
     echo $this->Html->script('index');
+    echo $this->Html->script('jquery.autocomplete');
+    echo $this->Html->script('summernote');
+    echo $this->Html->script('summernote-fr-FR');
+    echo $this->Html->script('humane');
+    echo $this->Html->script('custom');
     ?>
     <script type="text/javascript">
-        jQuery(document).ready(function() {
+        jQuery(document).ready(function(){
           	App.init();
             App.initSliders();
-            Index.initParallaxSlider();        
         });
     </script>
-    <script src="//cdn.ckeditor.com/4.4.6/standard/ckeditor.js"></script>
     <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
-    <?php 
-    if(!empty($analytics) OR $analytics != 0){
+    <script src="//cdnjs.cloudflare.com/ajax/libs/numeral.js/1.4.5/numeral.min.js"></script>
+    <?php
+    if(!empty($analytics) && $analytics != 0){
         ?>
         <script>
-          (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-          ga('create', '<?php echo $analytics; ?>', 'auto');
-          ga('send', 'pageview');
+            (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+                    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+                m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+            })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+            ga('create', '<?= $analytics; ?>', 'auto');
+            ga('send', 'pageview');
         </script>
         <?php
     }

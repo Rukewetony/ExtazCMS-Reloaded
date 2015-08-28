@@ -1,4 +1,4 @@
-<?php $this->assign('title', 'Modifier les informations'); ?>
+<?php $this->assign('title', 'Configuration du CMS'); ?>
 <script>
 $(document).ready(function(){
     $('.loading').on('click', function(event){
@@ -11,193 +11,231 @@ $(document).ready(function(){
         var username = $('#InformationsJsonapiUsername').val();
         var password = $('#InformationsJsonapiPassword').val();
         var salt = $('#InformationsJsonapiSalt').val();
-        var url = '<?php echo $this->Html->url(array('controller' => 'informations', 'action' => 'testJsonapi')); ?>';
+        var url = '<?php echo $this->Html->url(array('controller' => 'informations', 'action' => 'test_jsonapi')); ?>';
         $('.test-jsonapi').hide();
         $('.loading').show();
         $.post(url, {ip: ip, port: port, username: username, password: password, salt: salt}, 
             function(data){
                 $('.loading').hide();
                 $('.test-jsonapi').show();
+                toastr.options = {
+                    closeButton: true,
+                    progressBar: true,
+                    showMethod: 'slideDown',
+                    timeOut: 3000
+                };
                 if(data.result == 'success'){
-                    $.bootstrapGrowl("<i class='fa fa-check'></i> Connexion effectuée avec succès !", {
-                        ele: 'body', // which element to append to
-                        type: 'success', // (null, 'info', 'danger', 'success')
-                        offset: {from: 'top', amount: 20}, // 'top', or 'bottom'
-                        align: 'center', // ('left', 'right', or 'center')
-                        width: 'integer', // (integer, or 'auto')
-                        delay: 2000, // Time while the message will be displayed. It's not equivalent to the *demo* timeOut!
-                        allow_dismiss: false, // If true then will display a cross to close the popup.
-                        stackup_spacing: 10 // spacing between consecutively stacked growls.
-                    });
+                    toastr.success('', 'Connexion effectuée avec succès !');
                 }
                 else{
-                    $.bootstrapGrowl("<i class='fa fa-times'></i> Impossible d'établir la connexion", {
-                        ele: 'body', // which element to append to
-                        type: 'danger', // (null, 'info', 'danger', 'success')
-                        offset: {from: 'top', amount: 20}, // 'top', or 'bottom'
-                        align: 'center', // ('left', 'right', or 'center')
-                        width: 'integer', // (integer, or 'auto')
-                        delay: 2000, // Time while the message will be displayed. It's not equivalent to the *demo* timeOut!
-                        allow_dismiss: false, // If true then will display a cross to close the popup.
-                        stackup_spacing: 10 // spacing between consecutively stacked growls.
-                    });
+                    toastr.error('', 'Impossible d\'établir la connexion');
                 }
             }, 
         'json');
     });
+    <?php
+    if(array_key_exists('tab', $this->request->query)){
+        if($this->request->query['tab'] == 'options'){
+            ?>
+            $('#tab1').removeClass('active');
+            $('#tab5').addClass('active');
+            $('#tab-1').removeClass('active');
+            $('#tab-5').addClass('active');
+            <?php
+        }
+    }
+    ?>
 });
 </script>
-<div class="main-content">
-    <div class="container">  
+<div class="wrapper wrapper-content">
+    <div class="animated fadeInRightBig"> 
         <div class="row">
-            <div class="col-md-9">
-                <div class="tab-v1">
-                    <ul class="nav nav-tabs nav-justified">
-                        <li class="active" id="tab1"><a href="#tab-1" data-toggle="tab">Général</a></li>
-                        <li class="" id="tab2"><a href="#tab-2" data-toggle="tab">JSONAPI</a></li>
-                        <li class="" id="tab3"><a href="#tab-3" data-toggle="tab">Starpass/PayPal</a></li>
-                        <li class="" id="tab4"><a href="#tab-4" data-toggle="tab">Options</a></li>
-                        <li class="" id="tab5"><a href="#tab-5" data-toggle="tab">Réglement</a></li>
-                    </ul>       
+            <div class="col-md-12">
+                <div class="tabs-container">
+                    <ul class="nav nav-tabs">
+                        <li class="active" id="tab1"><a href="#tab-1" data-toggle="tab" aria-expanded="true">Général</a></li>
+                        <li id="tab2"><a href="#tab-2" data-toggle="tab" aria-expanded="true">Votes</a></li>
+                        <li id="tab3"><a href="#tab-3" data-toggle="tab" aria-expanded="true">JSONAPI</a></li>
+                        <li id="tab4"><a href="#tab-4" data-toggle="tab" aria-expanded="true">Starpass/PayPal</a></li>
+                        <li id="tab5"><a href="#tab-5" data-toggle="tab" aria-expanded="true">Options</a></li>
+                        <li id="tab6"><a href="#tab-6" data-toggle="tab" aria-expanded="true">Réglement</a></li>
+                    </ul>
                     <div class="tab-content">
-                        <div class="tab-pane fade active in" id="tab-1">
-                            <?php echo $this->Form->create('Informations', ['action' => 'updateInformations']); ?>
-                                <?php $informations = [
-                                'name_server' => 'Nom du serveur', 
-                                'ip_server' => 'IP du serveur', 
-                                'port_server' => 'Port du serveur', 
-                                'money_server' => 'Monnaie du serveur (Si vous autorisez le paiement via celle-ci)',
-                                'site_money' => 'Nom de la monnaie du site (Si vous utilisez la boutique)',
-                                'contact_email' => 'Votre email pour la page contact',
-                                'logo_url' => 'URL de votre logo',
-                                'chat_prefix' => 'Prefix pour le chat',
-                                'chat_nb_messages' => 'Nombres de messages à afficher dans le chat',
-                                'analytics' => 'ID Google Analytics (Facultatif)'
-                                ]; ?>
-                                <?php foreach($informations as $k => $v){ ?>
-                                <div class="form-group">
-                                    <?php echo $this->Form->input($k, array('type' => 'text', 'value' => $data['Informations'][$k], 'class' => 'form-control', 'label' => $v)); ?>
-                                </div>
-                                <?php } ?>
-                                <button class="btn btn-black pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button><br>
-                            <?php echo $this->Form->end(); ?>
+                        <div id="tab-1" class="general tab-pane active">
+                            <div class="panel-body">
+                                <?php echo $this->Form->create('Informations', ['action' => 'update_informations']); ?>
+                                    <?php $informations = [
+                                    'name_server' => ['label' => 'Nom du serveur', 'type' => 'text'], 
+                                    'ip_server' => ['label' => 'IP du serveur', 'type' => 'text'], 
+                                    'port_server' => ['label' => 'Port du serveur', 'type' => 'number'], 
+                                    'money_server' => ['label' => 'Monnaie du serveur (Si vous autorisez le paiement via celle-ci)', 'type' => 'text'], 
+                                    'site_money' => ['label' => 'Nom de la monnaie du site (Si vous utilisez la boutique)', 'type' => 'text'], 
+                                    'contact_email' => ['label' => 'Votre email pour la page contact', 'type' => 'text'], 
+                                    'logo_url' => ['label' => 'URL de votre logo', 'type' => 'url'], 
+                                    'chat_prefix' => ['label' => 'Prefix pour le chat', 'type' => 'text'], 
+                                    'chat_nb_messages' => ['label' => 'Nombres de messages à afficher dans le chat', 'type' => 'number'], 
+                                    'analytics' => ['label' => 'ID Google Analytics (Facultatif)', 'type' => 'text'],
+                                    'send_tokens_loss_rate' => ['label' => 'Taux de '.$site_money.' perdu lors d\'un transfert (en %)', 'type' => 'text'],
+                                    'customs_buttons_title' => ['label' => 'Titre du module des boutons customisables', 'type' => 'text']
+                                    ]; ?>
+                                    <?php foreach($informations as $k => $v){ ?>
+                                    <div class="form-group">
+                                        <?php echo $this->Form->input($k, array('type' => $v['type'], 'value' => $data['Informations'][$k], 'class' => 'form-control', 'label' => $v['label'])); ?>
+                                    </div>
+                                    <?php } ?>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <hr>
+                                            <button class="btn btn-w-m btn-primary pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button>
+                                        </div>
+                                    </div>
+                                <?php echo $this->Form->end(); ?>
+                            </div>
                         </div>
-                        <div class="tab-pane fade" id="tab-2">
-                            <?php echo $this->Form->create('Informations', ['action' => 'updateInformations']); ?>
-                                <?php $informations = [
-                                'jsonapi_ip' => 'IP du serveur pour JSONAPI', 
-                                'jsonapi_port' => 'Port pour JSONAPI', 
-                                'jsonapi_username' => 'Nom d\'utilisateur JSONAPI',
-                                'jsonapi_password' => 'Mot de passe JSONAPI',
-                                'jsonapi_salt' => 'Salt JSONAPI (Facultatif)'
-                                ]; ?>
-                                <?php foreach($informations as $k => $v){ ?>
-                                <div class="form-group">
-                                    <?php echo $this->Form->input($k, array('type' => 'text', 'value' => $data['Informations'][$k], 'class' => 'form-control', 'label' => $v)); ?>
-                                </div>
-                                <?php } ?>
-                                <button class="btn btn-black test-jsonapi"><i class="fa fa-globe"></i> Tester la connexion</button>
-                                <button class="btn btn-black loading" style="display:none;"><i class="fa fa-refresh fa-spin"></i> Connexion en cours...</button>
-                                <button class="btn btn-black pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button><br>
-                            <?php echo $this->Form->end(); ?>
+                        <div id="tab-2" class="tab-pane">
+                            <div class="panel-body">
+                                <?php echo $this->Form->create('Informations', ['action' => 'update_informations']); ?>
+                                    <?php $informations = [
+                                    'votes_url' => ['label' => 'URL de vote', 'type' => 'text'],
+                                    'votes_description' => ['label' => 'Description', 'type' => 'text'],
+                                    'votes_time' => ['label' => 'Temps entre deux votes (en minutes)', 'type' => 'number'],
+                                    'votes_reward' => ['label' => 'Nombre de '.$site_money.' gagné pour un vote', 'type' => 'number'],
+                                    'votes_command' => ['label' => 'Commande(s) à éxécuter après chaque vote (facultatif)', 'type' => 'text'],
+                                    'votes_ladder_limit' => ['label' => 'Nombre de joueurs à afficher dans la classement', 'type' => 'number']
+                                    ]; ?>
+                                    <?php foreach($informations as $k => $v){ ?>
+                                    <div class="form-group">
+                                        <?php echo $this->Form->input($k, array('type' => $v['type'], 'value' => $data['Informations'][$k], 'class' => 'form-control', 'label' => $v['label'])); ?>
+                                    </div>
+                                    <?php } ?>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <hr>
+                                            <button class="btn btn-w-m btn-primary pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button>
+                                        </div>
+                                    </div>
+                                <?php echo $this->Form->end(); ?>
+                            </div>
                         </div>
-                        <div class="tab-pane fade" id="tab-3">
-                            <?php echo $this->Form->create('Informations', ['action' => 'updateInformations']); ?>
-                                <?php $informations = [
-                                'starpass_idp' => 'IDP Starpass',
-                                'starpass_idd' => 'IDD Starpass',
-                                'starpass_tokens' => 'Nombre d\'argent gagné sur le site pour un code Starpass valide',
-                                'paypal_price' => 'Prix pour PayPal (en €)',
-                                'paypal_tokens' => 'Nombre d\'argent gagné sur le site pour un achat via PayPal',
-                                'paypal_email' => 'Votre email PayPal pour recevoir les paiements',
-                                'happy_hour_bonus' => 'Bonus d\'happy hour (en %)'
-                                ]; ?>
-                                <?php foreach($informations as $k => $v){ ?>
-                                <div class="form-group">
-                                    <?php echo $this->Form->input($k, array('type' => 'text', 'value' => $data['Informations'][$k], 'class' => 'form-control', 'label' => $v)); ?>
-                                </div>
-                                <?php } ?>
-                                <button class="btn btn-black pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button><br>
-                            <?php echo $this->Form->end(); ?>
+                        <div id="tab-3" class="tab-pane">
+                            <div class="panel-body">
+                                <?php echo $this->Form->create('Informations', ['action' => 'update_informations']); ?>
+                                    <?php $informations = [
+                                    'jsonapi_ip' => 'IP du serveur pour JSONAPI', 
+                                    'jsonapi_port' => 'Port pour JSONAPI', 
+                                    'jsonapi_username' => 'Nom d\'utilisateur JSONAPI',
+                                    'jsonapi_password' => 'Mot de passe JSONAPI',
+                                    'jsonapi_salt' => 'Salt JSONAPI (Facultatif)'
+                                    ]; ?>
+                                    <?php foreach($informations as $k => $v){ ?>
+                                    <div class="form-group">
+                                        <?php echo $this->Form->input($k, array('type' => 'text', 'value' => $data['Informations'][$k], 'class' => 'form-control', 'label' => $v)); ?>
+                                    </div>
+                                    <?php } ?>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <hr>
+                                            <button class="btn btn-w-m btn-primary test-jsonapi"><i class="fa fa-globe"></i> Tester la connexion</button>
+                                            <button class="btn btn-w-m btn-primary loading" style="display:none;"><i class="fa fa-refresh fa-spin"></i> Connexion en cours...</button>
+                                            <button class="btn btn-w-m btn-primary pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button>
+                                        </div>
+                                    </div>
+                                <?php echo $this->Form->end(); ?>
+                            </div>
                         </div>
-                        <div class="tab-pane fade" id="tab-4">
-                            <?php echo $this->Form->create('Informations', ['action' => 'updateOptions']); ?>
-                                <div class="form-group">
-                                    Activer le slider ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_slider" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_slider == 1) echo 'checked="checked"'; ?> id="onoffswitch1"><label for="onoffswitch1" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
+                        <div id="tab-4" class="tab-pane">
+                            <div class="panel-body">
+                                <?php echo $this->Form->create('Informations', ['action' => 'update_informations']); ?>
+                                    <?php $informations = [
+                                    'starpass_idp' => 'IDP Starpass',
+                                    'starpass_idd' => 'IDD Starpass',
+                                    'starpass_tokens' => 'Nombre d\'argent gagné sur le site pour un code Starpass valide',
+                                    'paypal_price' => 'Prix pour PayPal (en €)',
+                                    'paypal_tokens' => 'Nombre d\'argent gagné sur le site pour un achat via PayPal',
+                                    'paypal_email' => 'Votre email PayPal pour recevoir les paiements',
+                                    'happy_hour_bonus' => 'Bonus d\'happy hour (en %)'
+                                    ]; ?>
+                                    <?php foreach($informations as $k => $v){ ?>
+                                    <div class="form-group">
+                                        <?php echo $this->Form->input($k, array('type' => 'text', 'value' => $data['Informations'][$k], 'class' => 'form-control', 'label' => $v)); ?>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    Afficher la page équipe ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_team" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_team == 1) echo 'checked="checked"'; ?> id="onoffswitch1"><label for="onoffswitch1" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
+                                    <?php } ?>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <hr>
+                                            <button class="btn btn-w-m btn-primary pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    Afficher la page de contact ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_contact" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_contact == 1) echo 'checked="checked"'; ?> id="onoffswitch2"><label for="onoffswitch2" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    Afficher la page du règlement ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_rules" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_rules == 1) echo 'checked="checked"'; ?> id="onoffswitch3"><label for="onoffswitch3" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    Activer la boutique ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_store" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_store == 1) echo 'checked="checked"'; ?> id="onoffswitch4"><label for="onoffswitch4" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    Activer le module "meilleur donateur" ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_donation_ladder" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_donation_ladder == 1) echo 'checked="checked"'; ?> id="onoffswitch5"><label for="onoffswitch5" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    Activer le paiement via PayPal ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_paypal" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_paypal == 1) echo 'checked="checked"'; ?> id="onoffswitch6"><label for="onoffswitch6" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    Votre serveur utilise-t-il un système d'économie ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_economy" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_economy == 1) echo 'checked="checked"'; ?> id="onoffswitch7"><label for="onoffswitch7" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    Voulez vous autoriser le paiement via la monnaie du serveur dans la boutique ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="use_server_money" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($use_server_money == 1) echo 'checked="checked"'; ?> id="onoffswitch8"><label for="onoffswitch8" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    Happy hour activée ?
-                                    <div class="sw-red pull-right">
-                                        <div class="onoffswitch"><input name="happy_hour" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($happy_hour == 1) echo 'checked="checked"'; ?> id="onoffswitch9"><label for="onoffswitch9" class="onoffswitch-label"><div class="onoffswitch-inner"></div><div class="onoffswitch-switch"></div></label></div>
-                                    </div>
-                                </div>
-                                <hr>
-                                <button class="btn btn-black pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button><br>
-                            <?php echo $this->Form->end(); ?>
+                                <?php echo $this->Form->end(); ?>
+                            </div>
                         </div>
-                        <div class="tab-pane fade" id="tab-5">
-                            <?php echo $this->Form->create('Informations', ['action' => 'updateInformations']); ?>
-                                <?php $informations = [
-                                'rules' => 'Editer le réglement'
-                                ]; ?>
-                                <?php foreach($informations as $k => $v){ ?>
-                                <div class="form-group">
-                                    <?php echo $this->Form->textarea($k, array('type' => 'text', 'value' => $data['Informations'][$k], 'class' => 'ckeditor', 'label' => $v)); ?>
-                                </div>
-                                <?php } ?>
-                                <button class="btn btn-black pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button><br>
-                            <?php echo $this->Form->end(); ?>
+                        <div id="tab-5" class="options tab-pane">
+                            <div class="panel-body">
+                                <?php echo $this->Form->create('Informations', ['action' => 'update_options']); ?>
+                                    <?php
+                                    $informations = [
+                                    'Activer le slider' => 'use_slider',
+                                    'Activer les captchas' => 'use_captcha',
+                                    'Utiliser le système de vote' => 'use_votes',
+                                    'Utiliser le classement des votes' => 'use_votes_ladder',
+                                    'Afficher la page équipe' => 'use_team',
+                                    'Afficher la page de contact' => 'use_contact',
+                                    'Afficher la page du règlement' => 'use_rules',
+                                    'Activer la boutique' => 'use_store',
+                                    'Afficher les nombre de vues sur les actualités' => 'use_posts_views',
+                                    'Activer le module "meilleur donateur"' => 'use_donation_ladder',
+                                    'Activer le paiement via PayPal' => 'use_paypal',
+                                    'Votre serveur utilise-t-il un système d\'économie' => 'use_economy',
+                                    'Voulez vous autoriser le paiement via la monnaie du serveur dans la boutique' => 'use_server_money',
+                                    'Happy hour activée' => 'happy_hour',
+                                    'Maintenance activé' => 'maintenance'
+                                    ];
+                                    $nb = 0;
+                                    foreach($informations as $k => $v){
+                                        $nb++;
+                                        ?>
+                                        <div class="form-group">
+                                            <b><?php echo $k; ?> ?</b>
+                                            <div class="sw-red margin-right-15 pull-left">
+                                                <div class="onoffswitch"><input name="<?php echo $v; ?>" type="checkbox" class="checkboxes onoffswitch-checkbox" <?php if($config[$v] == 1) echo 'checked="checked"'; ?> id="onoffswitch<?php echo $nb; ?>">
+                                                    <label for="onoffswitch<?php echo $nb; ?>" class="onoffswitch-label">
+                                                        <div class="onoffswitch-inner"></div>
+                                                        <div class="onoffswitch-switch"></div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php
+                                    }
+                                    ?>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <hr>
+                                            <button class="btn btn-w-m btn-primary pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button>
+                                        </div>
+                                    </div>
+                                <?php echo $this->Form->end(); ?>
+                            </div>
+                        </div>
+                        <div id="tab-6" class="tab-pane">
+                            <div class="panel-body">
+                                <?php echo $this->Form->create('Informations', ['action' => 'update_informations']); ?>
+                                    <?php $informations = [
+                                    'rules' => 'Editer le réglement'
+                                    ]; ?>
+                                    <?php foreach($informations as $k => $v){ ?>
+                                    <div class="form-group">
+                                        <?php echo $this->Form->textarea($k, array('type' => 'text', 'value' => $data['Informations'][$k], 'class' => 'ckeditor', 'label' => $v)); ?>
+                                    </div>
+                                    <?php } ?>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <hr>
+                                            <button class="btn btn-w-m btn-primary pull-right" type="submit"><i class="fa fa-check"></i> Confirmer les modifications</button>
+                                        </div>
+                                    </div>
+                                <?php echo $this->Form->end(); ?>
+                            </div>
                         </div>
                     </div>
                 </div>

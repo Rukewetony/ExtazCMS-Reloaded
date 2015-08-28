@@ -7,18 +7,22 @@
 */
 
 /*Import Google Font*/
-@import url(http://fonts.googleapis.com/css?family=Open+Sans:300,400);
+@import url(http://fonts.googleapis.com/css?family=Open+Sans+Condensed);
+@import url(http://fonts.googleapis.com/css?family=Raleway);
 
 /*Reset Styles
 ------------------------------------*/
-* {
-   border-radius: 0 !important;
+html {
+  overflow-y: scroll;
+
 }
 
 body { 
    color: #333; 
    font-size: 13px;
    line-height: 1.6;
+   font-family: 'Open Sans Condensed', sans-serif;
+   background-size: cover;
 }
 
 p, 
@@ -912,6 +916,11 @@ fieldset[disabled] .btn-u.btn-u-white.active {
 }
 .btn-u.btn-u-split-light-grey.dropdown-toggle {
    border-left: solid 1px #484f58;
+}
+
+.btn-u:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /*Bordered Buttons*/
@@ -1902,6 +1911,11 @@ i.icon-bg-light-grey {
 .text-highlights-brown {
    background: #9c8061;   
 }
+.text-highlights-light-blue {
+   background: #D9EDF7;
+   color: #31708f;
+   margin-bottom: 15px;
+}
 .text-highlights-dark-blue {
    background: #4765a0;
 }
@@ -2125,14 +2139,14 @@ blockquote.hero.hero-default small {
 ------------------------------------*/
 /*Testimonials*/
 .testimonials {
-  margin-bottom: 10px;
+  /*margin-bottom: 10px;*/
 }
 
 .testimonials .testimonial-info {
   color: #72c02c;
-  font-size: 16px;
+  font-size: 15px;
   padding: 0 15px;
-  margin-top: 18px;
+  /*margin-top: 18px;*/
 }
 
 .testimonials .testimonial-info span {
@@ -2147,9 +2161,9 @@ blockquote.hero.hero-default small {
 }
 
 .testimonials .testimonial-info img {
-  width: 60px;
+  width: 55px;
   float: left;
-  height: 60px;
+  height: 55px;
   padding: 2px;
   margin-right: 15px;
   border: solid 1px #ccc;
